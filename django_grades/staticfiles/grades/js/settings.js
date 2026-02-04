@@ -9,42 +9,50 @@
 // Initialize flatpickr for multi-date reminder picker
 function initReminderDatesPicker() {
     var $picker = $('.reminder-dates-picker');
-    if ($picker.length && !$picker.data('flatpickr-initialized')) {
-        var $startDate = $('input[name="start_date"]');
-        var $endDate = $('input[name="end_date"]');
+    if (!$picker.length || $picker.data('flatpickr-initialized')) return;
 
-        var minDate = $startDate.val() || null;
-        var maxDate = $endDate.val() || null;
-
-        $picker.flatpickr({
-            mode: 'multiple',
-            dateFormat: 'm/d/Y',
-            minDate: minDate,
-            maxDate: maxDate,
-            conjunction: ', ',
-            allowInput: false,
-            clickOpens: true,
-            onChange: function(selectedDates, dateStr, instance) {
-                // Sort dates chronologically
-                selectedDates.sort(function(a, b) { return a - b; });
-                var formatted = selectedDates.map(function(d) {
-                    return instance.formatDate(d, 'm/d/Y');
-                }).join(', ');
-                $picker.val(formatted);
-            }
-        });
-        $picker.data('flatpickr-initialized', true);
-
-        // Update date constraints when start/end dates change
-        $startDate.on('change', function() {
-            var fp = $picker[0]._flatpickr;
-            if (fp) fp.set('minDate', $(this).val());
-        });
-        $endDate.on('change', function() {
-            var fp = $picker[0]._flatpickr;
-            if (fp) fp.set('maxDate', $(this).val());
-        });
+    // Check if flatpickr is available
+    if (typeof flatpickr === 'undefined') {
+        // Flatpickr not loaded - make field editable as plain text input
+        $picker.removeAttr('readonly');
+        $picker.attr('placeholder', 'Enter dates: MM/DD/YYYY, MM/DD/YYYY');
+        return;
     }
+
+    var $startDate = $('input[name="start_date"]');
+    var $endDate = $('input[name="end_date"]');
+
+    var minDate = $startDate.val() || null;
+    var maxDate = $endDate.val() || null;
+
+    flatpickr($picker[0], {
+        mode: 'multiple',
+        dateFormat: 'm/d/Y',
+        minDate: minDate,
+        maxDate: maxDate,
+        conjunction: ', ',
+        allowInput: false,
+        clickOpens: true,
+        onChange: function(selectedDates, dateStr, instance) {
+            // Sort dates chronologically
+            selectedDates.sort(function(a, b) { return a - b; });
+            var formatted = selectedDates.map(function(d) {
+                return instance.formatDate(d, 'm/d/Y');
+            }).join(', ');
+            $picker.val(formatted);
+        }
+    });
+    $picker.data('flatpickr-initialized', true);
+
+    // Update date constraints when start/end dates change
+    $startDate.on('change', function() {
+        var fp = $picker[0]._flatpickr;
+        if (fp) fp.set('minDate', $(this).val());
+    });
+    $endDate.on('change', function() {
+        var fp = $picker[0]._flatpickr;
+        if (fp) fp.set('maxDate', $(this).val());
+    });
 }
 
 // Initialize Grade Scale dynamic table
