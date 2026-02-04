@@ -66,7 +66,7 @@ def grades(request):
 
     return render(
         request,
-        'grades/student/grades.html',
+        'student/grades.html',
         {
             'intro': intro,
             'student': student,
