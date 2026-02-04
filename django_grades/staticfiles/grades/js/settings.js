@@ -6,52 +6,80 @@
  * - initGradeScaleTable: Dynamic table for grade scale configuration
  */
 
+// Load flatpickr dynamically if not available
+function loadFlatpickr(callback) {
+    if (typeof flatpickr !== 'undefined') {
+        callback();
+        return;
+    }
+
+    // Load CSS
+    if (!document.querySelector('link[href*="flatpickr"]')) {
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css';
+        document.head.appendChild(css);
+    }
+
+    // Load JS
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/flatpickr';
+    script.onload = callback;
+    script.onerror = function() {
+        console.warn('Failed to load flatpickr, using plain text input fallback');
+        callback();
+    };
+    document.head.appendChild(script);
+}
+
 // Initialize flatpickr for multi-date reminder picker
 function initReminderDatesPicker() {
     var $picker = $('.reminder-dates-picker');
     if (!$picker.length || $picker.data('flatpickr-initialized')) return;
 
-    // Check if flatpickr is available
-    if (typeof flatpickr === 'undefined') {
-        // Flatpickr not loaded - make field editable as plain text input
-        $picker.removeAttr('readonly');
-        $picker.attr('placeholder', 'Enter dates: MM/DD/YYYY, MM/DD/YYYY');
-        return;
-    }
-
-    var $startDate = $('input[name="start_date"]');
-    var $endDate = $('input[name="end_date"]');
-
-    var minDate = $startDate.val() || null;
-    var maxDate = $endDate.val() || null;
-
-    flatpickr($picker[0], {
-        mode: 'multiple',
-        dateFormat: 'm/d/Y',
-        minDate: minDate,
-        maxDate: maxDate,
-        conjunction: ', ',
-        allowInput: false,
-        clickOpens: true,
-        onChange: function(selectedDates, dateStr, instance) {
-            // Sort dates chronologically
-            selectedDates.sort(function(a, b) { return a - b; });
-            var formatted = selectedDates.map(function(d) {
-                return instance.formatDate(d, 'm/d/Y');
-            }).join(', ');
-            $picker.val(formatted);
+    loadFlatpickr(function() {
+        // Check if flatpickr loaded successfully
+        if (typeof flatpickr === 'undefined') {
+            // Flatpickr not loaded - make field editable as plain text input
+            $picker.removeAttr('readonly');
+            $picker.attr('placeholder', 'Enter dates: MM/DD/YYYY, MM/DD/YYYY');
+            return;
         }
-    });
-    $picker.data('flatpickr-initialized', true);
 
-    // Update date constraints when start/end dates change
-    $startDate.on('change', function() {
-        var fp = $picker[0]._flatpickr;
-        if (fp) fp.set('minDate', $(this).val());
-    });
-    $endDate.on('change', function() {
-        var fp = $picker[0]._flatpickr;
-        if (fp) fp.set('maxDate', $(this).val());
+        var $startDate = $('input[name="start_date"]');
+        var $endDate = $('input[name="end_date"]');
+
+        var minDate = $startDate.val() || null;
+        var maxDate = $endDate.val() || null;
+
+        flatpickr($picker[0], {
+            mode: 'multiple',
+            dateFormat: 'm/d/Y',
+            minDate: minDate,
+            maxDate: maxDate,
+            conjunction: ', ',
+            allowInput: false,
+            clickOpens: true,
+            onChange: function(selectedDates, dateStr, instance) {
+                // Sort dates chronologically
+                selectedDates.sort(function(a, b) { return a - b; });
+                var formatted = selectedDates.map(function(d) {
+                    return instance.formatDate(d, 'm/d/Y');
+                }).join(', ');
+                $picker.val(formatted);
+            }
+        });
+        $picker.data('flatpickr-initialized', true);
+
+        // Update date constraints when start/end dates change
+        $startDate.on('change', function() {
+            var fp = $picker[0]._flatpickr;
+            if (fp) fp.set('minDate', $(this).val());
+        });
+        $endDate.on('change', function() {
+            var fp = $picker[0]._flatpickr;
+            if (fp) fp.set('maxDate', $(this).val());
+        });
     });
 }
 
