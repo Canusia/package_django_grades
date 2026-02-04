@@ -1,0 +1,19 @@
+# MANIFEST.in
+
+include LICENSE
+include README.md
+include requirements.txt
+
+# Include templates
+recursive-include django_grades/templates *
+
+# Include static files
+recursive-include django_grades/staticfiles *
+
+# Include migrations
+recursive-include django_grades/migrations *.py
+
+# Exclude compiled Python files
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.pyo
