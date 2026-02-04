@@ -373,6 +373,24 @@ Create `instructor/templates/instructor/partials/_breadcrumb.html`:
 </nav>
 ```
 
+### 11. Add Grades Tab to Class Section Admin
+
+To display grades in the CE admin class section view, add the following to `cis/templates/cis/sections/index.html`:
+
+In the tab navigation (inside `<ul class="nav nav-tabs">`):
+```html
+<li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#grades">Grades</a>
+</li>
+```
+
+In the tab content (inside `<div class="tab-content">`):
+```html
+<div class="tab-pane" id="grades">
+    {% include "grades/partials/_sections_grades_tab.html" %}
+</div>
+```
+
 ## Usage
 
 ### Instructor Portal
