@@ -6,7 +6,7 @@ from cis.menu import draw_menu, INSTRUCTOR_MENU
 from cis.models.term import Term
 from cis.models.section import ClassSection
 from ..forms.section import ClassSectionGradeFormSet, ClassSectionGradeForm
-from cis.utils import grades_page_header_for_instructor, is_submit_grades_open
+from ..utils import grades_page_header_for_instructor, is_submit_grades_open
 from cis.settings.instructor_portal import instructor_portal as portal_lang
 from ..settings.class_section_grades import class_section_grades
 
