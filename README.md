@@ -138,6 +138,241 @@ def get_current_student(request):
 
 > **Note:** Fallback implementations are included in django_grades, but for full functionality (FERPA checks, PSID validation), add the complete implementations above.
 
+### 7. Add Student Model Method for Transcript Generation
+
+Add the `generate_unofficial_transcript` method to your `Student` model (e.g., `cis/models/student.py`):
+
+```python
+def generate_unofficial_transcript(self, request=None):
+    """
+    Generate an unofficial transcript PDF for the student.
+    """
+    import pdfkit
+    from django.conf import settings
+    from django.template import Context, Template
+    from django.template.loader import get_template
+    from django.http import HttpResponse
+    from datetime import datetime
+    from cis.models.section import StudentRegistration
+
+    # Import settings based on DEBUG mode
+    if settings.DEBUG:
+        from django_grades.django_grades.settings.class_section_grades import class_section_grades
+    else:
+        from django_grades.settings.class_section_grades import class_section_grades
+
+    base_template = 'student/transcript.html'
+    template = get_template(base_template)
+
+    template_settings = class_section_grades.from_db()
+
+    student = self
+    student_name = f"{student.user.first_name} {student.user.last_name}"
+    student_id = student.suid or student.user.psid or ''
+    highschool_name = student.highschool.name if student.highschool else ''
+    generated_date = datetime.now().strftime('%B %d, %Y at %I:%M %p')
+
+    student_context = Context({
+        'student_name': student_name,
+        'student_id': student_id,
+        'highschool': highschool_name,
+        'generated_date': generated_date,
+    })
+
+    header_template = Template(template_settings.get('transcript_template_header', ''))
+    footer_template = Template(template_settings.get('transcript_template_footer', ''))
+    table_header_template = Template(template_settings.get('transcript_table_header', ''))
+    row_template = Template(template_settings.get('transcript_row_template', ''))
+
+    header_html = header_template.render(student_context)
+    footer_html = footer_template.render(student_context)
+    table_header_html = table_header_template.render(Context({}))
+
+    transcript_statuses = template_settings.get('transcript_registration_status', ['registered'])
+
+    registrations = StudentRegistration.objects.filter(
+        student=student,
+        status__in=transcript_statuses
+    ).select_related(
+        'class_section', 'class_section__term', 'class_section__course',
+        'class_section__teacher', 'class_section__teacher__user'
+    ).order_by('-class_section__term__code', 'class_section__course__name')
+
+    rows = []
+    for reg in registrations:
+        teacher_name = ''
+        if reg.class_section.teacher and reg.class_section.teacher.user:
+            teacher = reg.class_section.teacher.user
+            teacher_name = f"{teacher.first_name} {teacher.last_name}"
+
+        row_context = Context({
+            'term': str(reg.class_section.term) if reg.class_section.term else '',
+            'course_name': reg.class_section.course.name if reg.class_section.course else '',
+            'course_title': reg.class_section.course.title if reg.class_section.course else '',
+            'teacher': teacher_name,
+            'credit_hours': reg.class_section.course.credit_hours if reg.class_section.course else '',
+            'grade': reg.submitted_grade or '',
+        })
+        rows.append(row_template.render(row_context))
+
+    rows_html = '\n'.join(rows)
+
+    html = template.render({
+        'header': header_html,
+        'table_header': table_header_html,
+        'rows': rows_html,
+        'footer': footer_html,
+    })
+
+    if request and request.GET.get('mode') == 'page':
+        return HttpResponse(html)
+
+    options = {
+        'page-size': 'Letter',
+        'margin-top': '0.5in',
+        'margin-right': '0.5in',
+        'margin-bottom': '0.5in',
+        'margin-left': '0.5in',
+    }
+    pdf = pdfkit.from_string(html, False, options)
+
+    return pdf
+```
+
+### 8. Add Transcript Template
+
+Create `student/templates/student/transcript.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Unofficial Transcript</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; }
+        .text-muted { color: #666; }
+        .text-center { text-align: center; }
+        .row { display: flex; flex-wrap: wrap; }
+        .col-6 { width: 50%; }
+        .col-8 { width: 66.666%; }
+        .col-12 { width: 100%; }
+        hr { border: 0; border-top: 1px solid #ddd; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {{ header|safe }}
+        <table>
+            <thead>{{ table_header|safe }}</thead>
+            <tbody>{{ rows|safe }}</tbody>
+        </table>
+        {{ footer|safe }}
+    </div>
+</body>
+</html>
+```
+
+### 9. Add Student Base Templates
+
+Create `student/templates/student/base_student.html`:
+
+```html
+{% extends "student/logged-base.html" %}
+
+{% load static %}
+{% load templatehelpers %}
+{% load crispy_forms_tags %}
+
+{% block body %}
+<link rel="stylesheet" href="{% static 'student/css/student.css' %}">
+{% block extra_css %}{% endblock %}
+
+<main>
+    {% block page_header %}
+    {{intro|safe}}
+    {% include "student/partials/_breadcrumb.html" with page_name=page_name %}
+    {% endblock %}
+
+    <div class="row">
+        <div class="col-12">
+            {% block messages %}
+            {% include "cis/messages.html" %}
+            {% endblock %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+</main>
+{% endblock %}
+```
+
+Create `student/templates/student/partials/_breadcrumb.html`:
+
+```html
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'student:dashboard' %}">Home</a></li>
+        {% if parent_page %}
+        <li class="breadcrumb-item"><a href="{{ parent_url }}">{{ parent_page }}</a></li>
+        {% endif %}
+        <li class="breadcrumb-item active" aria-current="page">{{ page_name }}</li>
+    </ol>
+</nav>
+```
+
+### 10. Add Instructor Base Templates
+
+Create `instructor/templates/instructor/base_instructor.html`:
+
+```html
+{% extends "cis/logged-base.html" %}
+
+{% load static %}
+{% load templatehelpers %}
+
+{% block body %}
+{% block extra_css %}{% endblock %}
+
+<main>
+    {% block page_header %}
+    {{intro|safe}}
+    {% include "instructor/partials/_breadcrumb.html" with page_name=page_name %}
+    {% endblock %}
+
+    <div class="row">
+        <div class="col-12">
+            {% block messages %}
+            {% include "cis/messages.html" %}
+            {% endblock %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+</main>
+{% endblock %}
+```
+
+Create `instructor/templates/instructor/partials/_breadcrumb.html`:
+
+```html
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'instructor:dashboard' %}">Home</a></li>
+        {% if parent_page %}
+        <li class="breadcrumb-item"><a href="{{ parent_url }}">{{ parent_page }}</a></li>
+        {% endif %}
+        <li class="breadcrumb-item active" aria-current="page">{{ page_name }}</li>
+    </ol>
+</nav>
+```
+
 ## Usage
 
 ### Instructor Portal
