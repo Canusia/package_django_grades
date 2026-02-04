@@ -3,15 +3,50 @@ Student grade views.
 
 Displays grades and transcripts for authenticated students.
 """
-from django.shortcuts import render
+import functools
+
+from django.shortcuts import render, redirect
 from django.template import Context, Template
 from django.http import HttpResponse
+from django.contrib import messages
 
 from cis.menu import draw_menu, STUDENT_MENU
 from cis.settings.student_portal import student_portal as portal_lang
 
-from student.views.decorators import verify_account_complete
-from student.views.utils import get_current_student
+# Import utilities from student app, with fallback implementations
+try:
+    from student.views.decorators import verify_account_complete
+except ImportError:
+    def verify_account_complete(view_func):
+        """
+        Fallback decorator - requires student.views.decorators.verify_account_complete.
+
+        Add this to your student app:
+        See django_grades README.md for the required implementation.
+        """
+        @functools.wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if request.user.is_anonymous:
+                return redirect('/')
+            return view_func(request, *args, **kwargs)
+        return wrapper
+
+try:
+    from student.views.utils import get_current_student
+except ImportError:
+    def get_current_student(request):
+        """
+        Fallback utility - requires student.views.utils.get_current_student.
+
+        Add this to your student app:
+        See django_grades README.md for the required implementation.
+        """
+        if request.user.is_anonymous:
+            return None
+        try:
+            return request.user.student
+        except AttributeError:
+            return None
 
 
 def grades(request):
