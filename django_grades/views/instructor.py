@@ -40,8 +40,6 @@ def class_section_grade(request, record_id):
     class_section_info = get_object_or_404(ClassSection, pk=record_id)
     students_in_class = class_section_info.get_students_for_grades()
 
-    print(is_submit_grades_open(), 123)
-    
     settings = class_section_grades.from_db()
     grade_data = [
         {
