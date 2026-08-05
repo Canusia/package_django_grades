@@ -1,5 +1,13 @@
 # CLAUDE.md
 
+> [!WARNING]
+> **ARCHIVED — superseded by [`Canusia/package-grades`](https://github.com/Canusia/package-grades).**
+>
+> Do not make changes in this repo. `package-grades` (distribution
+> `myce_grades`, app label `grades`) is a strict superset of everything here
+> and is what tenants pin in `webapp/requirements.txt`. Any grades work belongs
+> there.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Overview

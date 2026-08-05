@@ -1,5 +1,23 @@
 # Django Grades
 
+> [!WARNING]
+> **ARCHIVED — superseded by [`Canusia/package-grades`](https://github.com/Canusia/package-grades).**
+>
+> This repo was the first cut of extracting the grades app out of the MyCE host
+> tree. `package-grades` (the `myce_grades` distribution, app label `grades`)
+> replaced it and is a strict superset: every view, URL, form, setting, report,
+> management command, template, and static file here also exists there, plus
+> grading periods and interim marks (`models.py` + migrations), the CE
+> grading-period admin and HS-admin period entry, a `services/` layer
+> (`gating`, `periods`, `reminders`, `period_reminders`, `roster`, `transcript`,
+> `window`), roster-confirmation gating, the real `grade_status_submitted`
+> instructor email, and a test suite. `utils.py` here lives on as
+> `grades/services/window.py` there (`grades_page_header_for_instructor` →
+> `page_header_for_instructor`).
+>
+> No tenant deployment installs this package. Do not add features or fix bugs
+> here — send them to `package-grades` instead.
+
 A Django app for managing student grades in MyCE (My Community Education) platform.
 
 ## Features
